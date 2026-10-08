@@ -1,0 +1,17 @@
+# Maven build output
+target/
+
+# Git & GitHub files
+.git/
+.gitignore
+.github/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Documentation & Miscellaneous
+*.md
+Dockerfile
+.dockerignore
