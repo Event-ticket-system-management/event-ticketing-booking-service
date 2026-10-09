@@ -1,93 +1,149 @@
 package com.eventticketing.bookingservice.adviser;
 
 import com.eventticketing.bookingservice.exception.*;
-import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.NOT_FOUND.value());
-        response.put("error", "Not found");
-        response.put("message", ex.getMessage());
+    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+            ResourceNotFoundException ex) {
 
-        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(InsufficientTicketsException.class)
-    public ResponseEntity<Map<String, Object>> handleInsufficientTicketsException(InsufficientTicketsException ex) {
-        return getMapBadRequest(ex);
-    }
+    public ResponseEntity<Map<String, Object>> handleInsufficientTicketsException(
+            InsufficientTicketsException ex) {
 
-    @ExceptionHandler(EventSerializationException.class)
-    public ResponseEntity<Map<String, Object>> handleEventSerializationException(
-            EventSerializationException ex) {
-
-        return getMapInternalServerError(ex);
-    }
-
-    @ExceptionHandler(EventProcessingException.class)
-    public ResponseEntity<Map<String, Object>> handleEventProcessingException(EventProcessingException ex) {
-        return getMapInternalServerError(ex);
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(InvalidBookingStateException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidBookingStateException(InvalidBookingStateException ex) {
-        return getMapBadRequest(ex);
+    public ResponseEntity<Map<String, Object>> handleInvalidBookingStateException(
+            InvalidBookingStateException ex) {
+
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(UnauthorizedAccessException.class)
-    public ResponseEntity<Map<String, Object>> handleUnauthorizedAccessException(UnauthorizedAccessException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.FORBIDDEN.value());
-        response.put("error", "Forbidden");
-        response.put("message", ex.getMessage());
+    public ResponseEntity<Map<String, Object>> handleUnauthorizedAccessException(
+            UnauthorizedAccessException ex) {
 
-        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthorizationDeniedException() {
+
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                "You do not have permission to access this resource."
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDeniedException() {
+
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                "You do not have permission to access this resource."
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationException(
+            MethodArgumentNotValidException ex) {
+
+        String message = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> String.format(
+                        "%s: %s",
+                        error.getField(),
+                        error.getDefaultMessage()
+                ))
+                .distinct()
+                .sorted()
+                .collect(Collectors.joining("; "));
+
+        if (message.isBlank()) {
+            message = "Request validation failed.";
+        }
+
+        return buildResponse(HttpStatus.BAD_REQUEST, message);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleTypeMismatchException(
+            MethodArgumentTypeMismatchException ex) {
+
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                String.format("Invalid value for parameter: %s", ex.getName())
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadableMessageException() {
+
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "Request body is missing, malformed, or contains invalid values."
+        );
+    }
+
+    @ExceptionHandler(EventSerializationException.class)
+    public ResponseEntity<Map<String, Object>> handleEventSerializationException() {
+
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Unable to process the booking event."
+        );
+    }
+
+    @ExceptionHandler(EventProcessingException.class)
+    public ResponseEntity<Map<String, Object>> handleEventProcessingException() {
+
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Unable to complete event processing."
+        );
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        response.put("error", "Internal Server Error");
-        response.put("message", "An unexpected error occurred. Please try again later.");
 
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred. Please try again later."
+        );
     }
 
-    @NonNull
-    private ResponseEntity<Map<String, Object>> getMapBadRequest(Exception ex) {
-        Map<String, Object> response = new HashMap<>();
+    private ResponseEntity<Map<String, Object>> buildResponse(
+            HttpStatus status,
+            String message) {
+
+        Map<String, Object> response = new LinkedHashMap<>();
         response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.BAD_REQUEST.value());
-        response.put("error", "Bad Request");
-        response.put("message", ex.getMessage());
+        response.put("status", status.value());
+        response.put("error", status.getReasonPhrase());
+        response.put("message", message);
 
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
-
-
-    @NonNull
-    private ResponseEntity<Map<String, Object>> getMapInternalServerError(Exception ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        response.put("error", "Internal Server Error");
-        response.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.status(status).body(response);
     }
 }
