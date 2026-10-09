@@ -70,7 +70,7 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(booking);
         log.info("Booking created with ID: {} and Reference: {} in PENDING status", savedBooking.getId(), bookingReference);
 
-        createOutboxEvent(booking);
+        createOutboxEvent(savedBooking);
 
         return objectMapper.toBookingResponse(savedBooking);
 
