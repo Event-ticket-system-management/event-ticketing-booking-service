@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:test_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  cache:
+    type: none
+
+  kafka:
+    listener:
+      bootstrap-servers: localhost:9092
+      auto-startup: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8083
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+
+jwt:
+  secret: VGhpc0lzQVNlY3VyZVRlc3RKd3RTZWNyZXRLZXlGb3JFdmVudFNlcnZpY2UyMDI2
