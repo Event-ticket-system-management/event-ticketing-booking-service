@@ -20,7 +20,7 @@ public class OutboxPublisherScheduler {
 
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private static final String TOPIC = "booking-events";
+    private static final String TOPIC = "booking.create";
     private static final int MAX_RETRIES = 5;
     private static final long KAFKA_TIMEOUT_SECONDS = 3;
 
