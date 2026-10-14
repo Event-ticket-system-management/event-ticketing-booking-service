@@ -12,7 +12,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
-      minimum-idle: ${DB_POOL_MIN_IDEL}
+      minimum-idle: ${DB_POOL_MIN_IDEL:2}
       idle-timeout: 300000
       connection-timeout: 20000
       max-lifetime: 1200000
@@ -25,7 +25,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -39,10 +39,10 @@ spring:
       properties:
         spring.json.add.type.header: false
         enable.idempotence: true
-        acks: call
+        acks: all
         retries: 3
     consumer:
-      group-id: booking-service
+      group-id: booking-service-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -67,5 +67,9 @@ EVENT_SERVICE_URL: http://localhost:8082
 
 jwt:
   secret: ${JWT_SECRET}
-
+#
+logging:
+  level:
+   org.springframework.kafka: DEBUG
+   org.apache.kafka.clients.consumer: DEBUG
 
