@@ -10,10 +10,13 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentCompletedEvent {
+public class PaymentEventDto {
+    private UUID eventId;
     private UUID bookingId;
+    private UUID userId;
     private String bookingReference;
     private String paymentId;
+    private String eventType;
     private String status;
     private String failureReason;
 }
