@@ -5,7 +5,7 @@ import com.eventticketing.bookingservice.dto.response.BookingResponseDto;
 import com.eventticketing.bookingservice.dto.response.EventResponseDto;
 import com.eventticketing.bookingservice.dto.response.paginate.BookingPaginateResponseDto;
 import com.eventticketing.bookingservice.enums.BookingStatus;
-import com.eventticketing.bookingservice.exception.ResourceNotFoundException;
+import com.eventticketing.bookingservice.exception.UnauthorizedAccessException;
 import com.eventticketing.bookingservice.service.BookingService;
 import com.eventticketing.bookingservice.service.impl.EventResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,20 +73,18 @@ class GetBookingIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should retrieve booking details by ID")
+    @DisplayName("Should allow owner to retrieve booking")
     void shouldRetrieveBookingById() {
 
-        String key = UUID.randomUUID().toString();
-
         BookingResponseDto createdBooking =
-                createBooking(userId, key);
+                createBooking(userId, UUID.randomUUID().toString());
 
         BookingResponseDto fetchedBooking =
                 bookingService.getBookingById(
-                        createdBooking.getId()
+                        createdBooking.getId(),
+                        userId,
+                        false
                 );
-
-        assertNotNull(fetchedBooking);
 
         assertAll(
                 () -> assertEquals(
@@ -94,8 +92,8 @@ class GetBookingIntegrationTest {
                         fetchedBooking.getId()
                 ),
                 () -> assertEquals(
-                        key,
-                        fetchedBooking.getIdempotencyKey()
+                        userId,
+                        fetchedBooking.getUserId()
                 ),
                 () -> assertEquals(
                         BookingStatus.PENDING_PAYMENT,
@@ -105,15 +103,23 @@ class GetBookingIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should reject nonexistent booking ID")
-    void shouldThrowWhenBookingNotFound() {
+    @DisplayName("Should reject another user accessing booking")
+    void shouldRejectCrossUserBookingAccess() {
 
-        UUID nonExistentId = UUID.randomUUID();
+        UUID anotherUserId = UUID.randomUUID();
+
+        BookingResponseDto createdBooking =
+                createBooking(
+                        userId,
+                        UUID.randomUUID().toString()
+                );
 
         assertThrows(
-                ResourceNotFoundException.class,
+                UnauthorizedAccessException.class,
                 () -> bookingService.getBookingById(
-                        nonExistentId
+                        createdBooking.getId(),
+                        anotherUserId,
+                        false
                 )
         );
     }
