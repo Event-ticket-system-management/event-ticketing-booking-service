@@ -24,36 +24,69 @@ public class SecurityConfiguration {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http){
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http
+    ) throws Exception {
+
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS
-                ))
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                        .authenticationEntryPoint(
+                                new HttpStatusEntryPoint(
+                                        HttpStatus.UNAUTHORIZED
+                                )
+                        )
+                )
+
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health")
-                        .permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/bookings/my-bookings", "/api/v1/bookings/*")
-                        .hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/health/**"
+                        ).permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/bookings")
-                        .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/bookings"
+                        ).hasRole("ADMIN")
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/bookings/**")
-                        .hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/bookings"
+                        ).hasAnyRole("USER", "ADMIN")
 
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/bookings/*/cancel")
-                        .hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/bookings/my-bookings"
+                        ).hasAnyRole("USER", "ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/bookings/*"
+                        ).hasAnyRole("USER", "ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/v1/bookings/{id}/cancle"
+                        ).hasAnyRole("USER", "ADMIN")
+
+                        .anyRequest().denyAll()
                 )
 
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 );
+
         return http.build();
     }
-
 }
