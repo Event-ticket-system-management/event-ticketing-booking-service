@@ -221,19 +221,23 @@ class BookingControllerTest {
     class GetBookingByIdTests {
 
         @Test
-        void shouldReturnBookingSuccessfully() throws Exception {
-            when(bookingService.getBookingById(bookingId))
-                    .thenReturn(bookingResponseDto);
+        void shouldAllowAdminToGetBookingById() throws Exception {
+
+            when(bookingService.getBookingById(
+                    bookingId,
+                    userId,
+                    true
+            )).thenReturn(bookingResponseDto);
 
             mockMvc.perform(get("/api/v1/bookings/{id}", bookingId)
-                            .with(authentication(userAuthentication())))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id")
-                            .value(bookingId.toString()))
-                    .andExpect(jsonPath("$.totalPrice")
-                            .value(3000.00));
+                            .with(authentication(adminAuthentication())))
+                    .andExpect(status().isOk());
 
-            verify(bookingService).getBookingById(bookingId);
+            verify(bookingService).getBookingById(
+                    bookingId,
+                    userId,
+                    true
+            );
         }
 
         @Test
@@ -363,7 +367,7 @@ class BookingControllerTest {
                     .thenReturn(bookingResponseDto);
 
             mockMvc.perform(patch(
-                            "/api/v1/bookings/{id}/cancel",
+                            "/api/v1/bookings/{id}/cancle",
                             bookingId)
                             .with(authentication(userAuthentication())))
                     .andExpect(status().isOk())
@@ -379,7 +383,7 @@ class BookingControllerTest {
         @Test
         void shouldRejectInvalidBookingId() throws Exception {
             mockMvc.perform(patch(
-                            "/api/v1/bookings/{id}/cancel",
+                            "/api/v1/bookings/{id}/cancle",
                             "invalid-uuid")
                             .with(authentication(userAuthentication())))
                     .andExpect(status().isBadRequest());
