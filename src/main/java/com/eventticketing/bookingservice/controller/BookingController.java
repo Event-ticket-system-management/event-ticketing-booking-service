@@ -5,11 +5,14 @@ import com.eventticketing.bookingservice.dto.response.BookingResponseDto;
 import com.eventticketing.bookingservice.dto.response.paginate.BookingPaginateResponseDto;
 import com.eventticketing.bookingservice.service.BookingService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
@@ -33,18 +36,41 @@ public class BookingController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+
     @GetMapping("/{id}")
-    public ResponseEntity<BookingResponseDto> getBookingById(@PathVariable UUID id) {
-        log.debug("REST Request to get booking details for ID: {}", id);
-        BookingResponseDto response = bookingService.getBookingById(id);
+    public ResponseEntity<BookingResponseDto> getBookingById(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal String userId,
+            Authentication authentication) {
+
+        UUID authenticatedUserId = extractUserUuid(userId);
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        {
+                            String authorityAuthority = authority.getAuthority();
+                            assert authorityAuthority != null;
+                            return authorityAuthority.equals("ROLE_ADMIN");
+                        }
+                );
+
+        BookingResponseDto response =
+                bookingService.getBookingById(
+                        id,
+                        authenticatedUserId,
+                        isAdmin
+                );
+
         return ResponseEntity.ok(response);
     }
+
 
     @GetMapping("/my-bookings")
     public ResponseEntity<BookingPaginateResponseDto> getMyBookings(
             @AuthenticationPrincipal String userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
 
         log.debug("REST Request to fetch my bookings for user: {}, page: {}, size: {}", userId, page, size);
         UUID userUuid = extractUserUuid(userId);
@@ -63,7 +89,7 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{id}/cancel")
+    @PatchMapping("/{id}/cancle")
     public ResponseEntity<BookingResponseDto> cancelBooking(
             @PathVariable UUID id,
             @AuthenticationPrincipal String userId) {

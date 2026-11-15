@@ -345,8 +345,8 @@ class BookingServiceImplTest {
     class GetBookingByIdTests {
 
         @Test
-        @DisplayName("Should return booking when ID exists")
-        void shouldReturnBookingWhenFound() {
+        @DisplayName("Should allow owner to retrieve booking")
+        void shouldReturnBookingForOwner() {
 
             when(bookingRepository.findById(bookingId))
                     .thenReturn(Optional.of(booking));
@@ -355,7 +355,11 @@ class BookingServiceImplTest {
                     .thenReturn(response);
 
             BookingResponseDto result =
-                    bookingService.getBookingById(bookingId);
+                    bookingService.getBookingById(
+                            bookingId,
+                            userId,
+                            false
+                    );
 
             assertNotNull(result);
             assertEquals(bookingId, result.getId());
@@ -364,19 +368,21 @@ class BookingServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when booking not found")
-        void shouldThrowWhenBookingNotFound() {
+        @DisplayName("Should reject cross-user booking access")
+        void shouldRejectUnauthorizedUser() {
+
+            UUID anotherUserId = UUID.randomUUID();
 
             when(bookingRepository.findById(bookingId))
-                    .thenReturn(Optional.empty());
+                    .thenReturn(Optional.of(booking));
 
-            ResourceNotFoundException exception = assertThrows(
-                    ResourceNotFoundException.class,
-                    () -> bookingService.getBookingById(bookingId)
-            );
-
-            assertTrue(
-                    exception.getMessage().contains(bookingId.toString())
+            assertThrows(
+                    UnauthorizedAccessException.class,
+                    () -> bookingService.getBookingById(
+                            bookingId,
+                            anotherUserId,
+                            false
+                    )
             );
 
             verifyNoInteractions(objectMapper);
@@ -433,6 +439,28 @@ class BookingServiceImplTest {
             assertTrue(result.getDataList().isEmpty());
 
             verifyNoInteractions(objectMapper);
+        }
+
+        @Test
+        @DisplayName("Should allow admin to retrieve any booking")
+        void shouldAllowAdminToRetrieveBooking() {
+
+            UUID adminId = UUID.randomUUID();
+
+            when(bookingRepository.findById(bookingId))
+                    .thenReturn(Optional.of(booking));
+
+            when(objectMapper.toBookingResponse(booking))
+                    .thenReturn(response);
+
+            BookingResponseDto result =
+                    bookingService.getBookingById(
+                            bookingId,
+                            adminId,
+                            true
+                    );
+
+            assertEquals(bookingId, result.getId());
         }
 
         @Test
@@ -638,5 +666,53 @@ class BookingServiceImplTest {
             assertEquals(status, booking.getStatus());
             verifyNoInteractions(objectMapper);
         }
+    }
+
+    @Test
+    @DisplayName("Should reject idempotency key owned by another user")
+    void shouldRejectCrossUserIdempotencyKey() {
+
+        UUID anotherUserId = UUID.randomUUID();
+
+        when(bookingRepository.findByIdempotencyKey("idem-key-123"))
+                .thenReturn(Optional.of(booking));
+
+        assertThrows(
+                UnauthorizedAccessException.class,
+                () -> bookingService.createBooking(
+                        request,
+                        anotherUserId
+                )
+        );
+
+        verifyNoInteractions(eventResolver);
+        verifyNoInteractions(outboxEventRepository);
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should reject idempotency key reused with different payload")
+    void shouldRejectIdempotencyKeyWithDifferentPayload() {
+
+        CreateBookingRequestDto differentRequest =
+                CreateBookingRequestDto.builder()
+                        .eventId(eventId)
+                        .ticketQuantity(5)
+                        .idempotencyKey("idem-key-123")
+                        .build();
+
+        when(bookingRepository.findByIdempotencyKey("idem-key-123"))
+                .thenReturn(Optional.of(booking));
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> bookingService.createBooking(
+                        differentRequest,
+                        userId
+                )
+        );
+
+        verifyNoInteractions(eventResolver);
+        verifyNoInteractions(outboxEventRepository);
     }
 }

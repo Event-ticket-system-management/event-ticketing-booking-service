@@ -20,11 +20,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -48,6 +51,21 @@ public class BookingServiceImpl implements BookingService {
         Optional<Booking> existingBooking = bookingRepository.findByIdempotencyKey(request.getIdempotencyKey());
         if (existingBooking.isPresent()) {
             log.info("Duplicate request detected with Idempotency Key: {}. Returning existing booking.", request.getIdempotencyKey());
+            Booking booking = existingBooking.get();
+
+            if (!booking.getUserId().equals(userId)) {
+                throw new UnauthorizedAccessException(
+                        "Idempotency key belongs to another user"
+                );
+            }
+
+            if (!booking.getEventId().equals(request.getEventId())
+                    || !Objects.equals(booking.getTicketQuantity(), request.getTicketQuantity())) {
+                throw new IllegalStateException(
+                        "Idempotency key reused with different request"
+                );
+            }
+
             return objectMapper.toBookingResponse(existingBooking.get());
         }
 
@@ -78,10 +96,25 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public BookingResponseDto getBookingById(UUID id) {
-        log.debug("Fetching booking by ID: {}", id);
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format("Booking not found with ID: %s", id )));
+    public BookingResponseDto getBookingById(
+            UUID bookingId,
+            UUID authenticatedUserId,
+            boolean isAdmin) {
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Booking not found"
+                        )
+                );
+
+        if (!isAdmin && !booking.getUserId().equals(authenticatedUserId)) {
+
+            throw new UnauthorizedAccessException(
+                    "You are not authorized to view this booking"
+            );
+        }
+
         return objectMapper.toBookingResponse(booking);
     }
 
