@@ -16,11 +16,14 @@ spring:
       idle-timeout: 300000
       connection-timeout: 20000
       max-lifetime: 1200000
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   data:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       timeout: 2000ms
+      password: ${REDIS_PASSWORD}
 
   jpa:
     hibernate:
@@ -32,7 +35,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -62,7 +65,8 @@ management:
       probes:
         enabled: true
 
-EVENT_SERVICE_URL: http://localhost:8082
+services:
+  event: ${EVENT_SERVICE_URL}
 
 
 jwt:
