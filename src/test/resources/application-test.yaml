@@ -10,16 +10,19 @@ spring:
 
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
       ddl-auto: create-drop
     show-sql: true
+
 
   cache:
     type: none
 
   kafka:
+    bootstrap-servers: localhost:9092
     listener:
-      bootstrap-servers: localhost:9092
       auto-startup: false
 
   data:
