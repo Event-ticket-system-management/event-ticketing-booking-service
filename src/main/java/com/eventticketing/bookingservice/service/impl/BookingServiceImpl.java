@@ -83,7 +83,7 @@ public class BookingServiceImpl implements BookingService {
                 .status(BookingStatus.PENDING_PAYMENT)
                 .build();
 
-        Booking savedBooking = bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.saveAndFlush(booking);
         log.info("Booking created with ID: {} and Reference: {} in PENDING status", savedBooking.getId(), bookingReference);
 
         createOutboxEvent(savedBooking);
