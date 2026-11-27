@@ -34,7 +34,7 @@ public class OutboxPublisherScheduler {
     @Scheduled(fixedDelay = 5000)
     @Transactional
     public void publishOutboxEvents() {
-        List<OutboxEvent> unprocessedEvents = outboxEventRepository.findTop10ByProcessedFalseOrderByCreatedAtAsc();
+        List<OutboxEvent> unprocessedEvents = outboxEventRepository.findUnprocessedEventsForUpdate();
 
         if (unprocessedEvents.isEmpty()) {
             return;

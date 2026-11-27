@@ -141,7 +141,7 @@ class CreateBookingIntegrationTest {
 
             List<OutboxEvent> outboxEvents =
                     outboxEventRepository
-                            .findTop10ByProcessedFalseOrderByCreatedAtAsc();
+                            .findAll();
 
             List<OutboxEvent> matchingEvents = outboxEvents.stream()
                     .filter(event -> persistedBooking.getId()
