@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,6 +17,12 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "app.outbox.publisher",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class OutboxPublisherScheduler {
 
     private final OutboxEventRepository outboxEventRepository;
@@ -27,7 +34,7 @@ public class OutboxPublisherScheduler {
     @Scheduled(fixedDelay = 5000)
     @Transactional
     public void publishOutboxEvents() {
-        List<OutboxEvent> unprocessedEvents = outboxEventRepository.findTop10ByProcessedFalseOrderByCreatedAtAsc();
+        List<OutboxEvent> unprocessedEvents = outboxEventRepository.findUnprocessedEventsForUpdate();
 
         if (unprocessedEvents.isEmpty()) {
             return;

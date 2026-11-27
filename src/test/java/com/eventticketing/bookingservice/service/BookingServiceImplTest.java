@@ -129,7 +129,7 @@ class BookingServiceImplTest {
             when(eventResolver.getValidatedEvent(eventId, 2))
                     .thenReturn(eventResponse);
 
-            when(bookingRepository.save(any(Booking.class)))
+            when(bookingRepository.saveAndFlush(any(Booking.class)))
                     .thenReturn(booking);
 
             when(jsonObjectMapper.writeValueAsString(
@@ -157,7 +157,7 @@ class BookingServiceImplTest {
                     ArgumentCaptor.forClass(Booking.class);
 
             verify(bookingRepository)
-                    .save(bookingCaptor.capture());
+                    .saveAndFlush(bookingCaptor.capture());
 
             Booking capturedBooking = bookingCaptor.getValue();
 
@@ -195,7 +195,11 @@ class BookingServiceImplTest {
                     () -> assertEquals("LKR", capturedEvent.getCurrency()),
                     () -> assertEquals(
                             new BigDecimal("3000.00"),
-                            capturedEvent.getTotalPrice())
+                            capturedEvent.getTotalPrice()),
+                    () -> assertNotNull(capturedEvent.getCreatedAt()),
+                    () -> assertEquals(
+                            booking.getCreatedAt(),
+                            capturedEvent.getCreatedAt())
             );
 
             ArgumentCaptor<OutboxEvent> outboxCaptor =
@@ -243,7 +247,7 @@ class BookingServiceImplTest {
             verifyNoInteractions(eventResolver);
             verifyNoInteractions(outboxEventRepository);
             verify(bookingRepository, never())
-                    .save(any(Booking.class));
+                    .saveAndFlush(any(Booking.class));
         }
 
         @Test
@@ -268,7 +272,7 @@ class BookingServiceImplTest {
             );
 
             verify(bookingRepository, never())
-                    .save(any(Booking.class));
+                    .saveAndFlush(any(Booking.class));
 
             verifyNoInteractions(outboxEventRepository);
         }
@@ -283,7 +287,7 @@ class BookingServiceImplTest {
             when(eventResolver.getValidatedEvent(eventId, 2))
                     .thenReturn(eventResponse);
 
-            when(bookingRepository.save(any(Booking.class)))
+            when(bookingRepository.saveAndFlush(any(Booking.class)))
                     .thenReturn(booking);
 
             when(jsonObjectMapper.writeValueAsString(
@@ -315,7 +319,7 @@ class BookingServiceImplTest {
             when(eventResolver.getValidatedEvent(eventId, 2))
                     .thenReturn(eventResponse);
 
-            when(bookingRepository.save(any(Booking.class)))
+            when(bookingRepository.saveAndFlush(any(Booking.class)))
                     .thenReturn(booking);
 
             when(jsonObjectMapper.writeValueAsString(
@@ -687,7 +691,7 @@ class BookingServiceImplTest {
 
         verifyNoInteractions(eventResolver);
         verifyNoInteractions(outboxEventRepository);
-        verify(bookingRepository, never()).save(any());
+        verify(bookingRepository, never()).saveAndFlush(any());
     }
 
     @Test

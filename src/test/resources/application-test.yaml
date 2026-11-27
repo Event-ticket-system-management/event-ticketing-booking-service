@@ -39,3 +39,11 @@ logging:
 
 jwt:
   secret: VGhpc0lzQVNlY3VyZVRlc3RKd3RTZWNyZXRLZXlGb3JFdmVudFNlcnZpY2UyMDI2
+
+app:
+  outbox:
+    publisher:
+      enabled: false
+  kafka:
+    consumer:
+      enabled: false

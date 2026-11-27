@@ -56,13 +56,16 @@ public class KafkaConsumerConfiguration {
     @Bean(name = "kafkaListenerContainerFactory")
     public ConcurrentKafkaListenerContainerFactory<String, String>
     kafkaListenerContainerFactory(
-            ConsumerFactory<String, String> consumerFactory
+            ConsumerFactory<String, String> consumerFactory,
+            @Value("${spring.kafka.listener.auto-startup:true}")
+            boolean autoStartup
     ) {
 
         ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(consumerFactory);
+        factory.setAutoStartup(autoStartup);
 
         return factory;
     }

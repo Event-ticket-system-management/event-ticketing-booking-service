@@ -19,6 +19,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +36,9 @@ class CreateBookingIntegrationTest {
 
     @Autowired
     private BookingService bookingService;
+
+    @Autowired
+    private ObjectMapper jsonObjectMapper;
 
     @Autowired
     private BookingRepository bookingRepository;
@@ -95,6 +100,8 @@ class CreateBookingIntegrationTest {
             assertAll(
                     () -> assertNotNull(response),
                     () -> assertNotNull(response.getId()),
+                    () -> assertNotNull(response.getCreatedAt()),
+                    () -> assertNotNull(response.getUpdatedAt()),
                     () -> assertEquals(
                             BookingStatus.PENDING_PAYMENT,
                             response.getStatus()
@@ -141,7 +148,7 @@ class CreateBookingIntegrationTest {
 
             List<OutboxEvent> outboxEvents =
                     outboxEventRepository
-                            .findTop10ByProcessedFalseOrderByCreatedAtAsc();
+                            .findAll();
 
             List<OutboxEvent> matchingEvents = outboxEvents.stream()
                     .filter(event -> persistedBooking.getId()
@@ -153,6 +160,9 @@ class CreateBookingIntegrationTest {
 
             OutboxEvent persistedOutbox = matchingEvents.getFirst();
 
+            JsonNode payload =
+                    jsonObjectMapper.readTree(persistedOutbox.getPayload());
+
             assertAll(
                     () -> assertEquals(
                             "BOOKING",
@@ -162,9 +172,11 @@ class CreateBookingIntegrationTest {
                             "BOOKING_CREATE",
                             persistedOutbox.getEventType()
                     ),
+                    () -> assertFalse(persistedOutbox.isProcessed()),
+                    () -> assertTrue(payload.hasNonNull("createdAt")),
                     () -> assertEquals(
-                            Boolean.FALSE,
-                            persistedOutbox.isProcessed()
+                            persistedBooking.getId().toString(),
+                            payload.path("bookingId").asText()
                     )
             );
         }
