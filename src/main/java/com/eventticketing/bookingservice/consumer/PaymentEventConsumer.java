@@ -5,6 +5,7 @@ import com.eventticketing.bookingservice.service.impl.BookingPaymentEventHandler
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -12,6 +13,12 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "app.kafka.consumer",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class PaymentEventConsumer {
     private final BookingPaymentEventHandler handler;
     private final ObjectMapper objectMapper;
